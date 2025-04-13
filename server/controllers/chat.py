@@ -1,4 +1,5 @@
 from config import client, messages, model, fallback_models
+from fastapi.responses import StreamingResponse
 
 def generate_response(prompt: str, language: str = "en"):
     language_instruction = {
@@ -14,12 +15,18 @@ def generate_response(prompt: str, language: str = "en"):
         }
     )
 
-    completion = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        extra_body={
-            "models": fallback_models
-        }
-    )
+    def event_stream():
+        stream = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            extra_body={
+                "models": fallback_models
+            },
+            stream=True
+        )
 
-    return completion
+        for chunk in stream:
+            if content := chunk.choices[0].delta.content:
+                yield content
+
+    return StreamingResponse(event_stream(), media_type="text/plain")
