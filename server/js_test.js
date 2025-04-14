@@ -2,7 +2,7 @@
 
 const prompt = "Explain the growth of Apple Inc.";
 
-fetch("http://localhost:8000/chat/", {
+fetch("http://localhost:8000/chat/stream", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
