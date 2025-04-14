@@ -1,4 +1,4 @@
-Date,Users,Sessions,Pageviews,Bounce Rate,Avg. Session Duration,New Users
+date,users,sessions,page_views,bounce_rate,avg_session_duration,new_users
 2025-03-01,350,400,950,42.5%,00:03:15,300
 2025-03-02,375,420,980,40.1%,00:03:30,310
 2025-03-03,390,450,1020,39.0%,00:03:20,320
