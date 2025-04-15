@@ -16,6 +16,7 @@ system_instruction = (
 
 model = "qwen/qwen-2.5-72b-instruct"
 # model = "openrouter/optimus-alpha"
+# model = "deepseek/deepseek-chat-v3-0324:free"
 fallback_models = ["deepseek/deepseek-chat", "openrouter/optimus-alpha"]
 
 messages = [{
