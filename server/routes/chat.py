@@ -10,11 +10,9 @@ class ChatRequest(BaseModel):
     prompt: str
     language: Optional[str] = "en"
 
-# @router.post("/stream", response_class=StreamingResponse)
-@router.post("/stream")
+@router.post("/stream", response_class=StreamingResponse)
 def stream_response(chat_request: ChatRequest):
-    chat.stream_response(chat_request.prompt, chat_request.language)   
-    return { "message": "done" }
+    return chat.stream_response(chat_request.prompt, chat_request.language)   
 
 @router.post("/generate")
 def generate_response(chat_request: ChatRequest):

@@ -19,47 +19,7 @@ def stream_response(prompt: str, language: str = "en"):
         }
     )
 
-    stream = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        tools=tools,
-        extra_body={
-            "models": fallback_models
-        },
-        stream=True
-    )
-
-    full_content = ""
-    final_tool_calls = []
-
-    for event in stream:
-        event_delta = event.choices[0].delta
-
-        if event_delta.tool_calls is None or len(event_delta.tool_calls) is 0:
-            full_content += event_delta.content
-            sys.stdout.write(event_delta.content)
-            sys.stdout.flush()
-        else:
-            for tool_call in event_delta.tool_calls:
-                if tool_call.id:
-                    final_tool_calls.append(tool_call)
-
-    messages.append({
-        "role": "assistant",
-        "content": full_content,
-        "tool_calls": final_tool_calls
-    })
-
-    if final_tool_calls:
-        for tool_call in final_tool_calls:
-            results = tool_mapping[tool_call.function.name]()
-
-            messages.append({
-                "role": "tool",
-                "name": tool_call.function.name,
-                "content": str(results)
-            })
-
+    def event_stream():
         stream = client.chat.completions.create(
             model=model,
             messages=messages,
@@ -70,21 +30,68 @@ def stream_response(prompt: str, language: str = "en"):
             stream=True
         )
 
-        final_content = ""
+        full_content = ""
+        final_tool_calls = []
 
         for event in stream:
             event_delta = event.choices[0].delta
 
-            final_content += event_delta.content
-            sys.stdout.write(event_delta.content)
-            sys.stdout.flush()
+            if event_delta.tool_calls is None or len(event_delta.tool_calls) is 0:
+                full_content += event_delta.content
+                # sys.stdout.write(event_delta.content)
+                # sys.stdout.flush()
+                yield event_delta.content
+
+            else:
+                for tool_call in event_delta.tool_calls:
+                    print(json.dumps(tool_call.model_dump(), indent=4))
+                    if tool_call.id:
+                        final_tool_calls.append(tool_call)
 
         messages.append({
             "role": "assistant",
-            "content": final_content
+            "content": full_content,
+            "tool_calls": final_tool_calls
         })
-            
-    # return StreamingResponse(event_stream(), media_type="text/plain")
+
+        if final_tool_calls:
+            for tool_call in final_tool_calls:
+                results = tool_mapping[tool_call.function.name]()
+                print(json.dumps(results, indent=4))
+
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": str(results)
+                })
+
+            stream = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=tools,
+                extra_body={
+                    "models": fallback_models
+                },
+                stream=True
+            )
+
+            final_content = ""
+
+            for event in stream:
+                event_delta = event.choices[0].delta
+
+                final_content += event_delta.content
+                # sys.stdout.write(event_delta.content)
+                # sys.stdout.flush()
+
+                yield event_delta.content
+
+            messages.append({
+                "role": "assistant",
+                "content": final_content
+            })
+                
+    return StreamingResponse(event_stream(), media_type="text/plain")
 
 def generate_response(prompt: str, language: str = "en"):
     print(prompt)

@@ -14,8 +14,8 @@ system_instruction = (
     "Introduce yourself and your capabilities only when greeted else start answering the question directly"
 )
 
-model = "qwen/qwen-2.5-72b-instruct"
-# model = "openrouter/optimus-alpha"
+# model = "qwen/qwen-2.5-72b-instruct"
+model = "google/gemini-2.0-flash-exp:free"
 # model = "deepseek/deepseek-chat-v3-0324:free"
 fallback_models = ["deepseek/deepseek-chat", "openrouter/optimus-alpha"]
 
