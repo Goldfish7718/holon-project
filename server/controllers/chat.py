@@ -5,7 +5,7 @@ import json
 import sys
 
 def stream_response(prompt: str, language: str = "en"):
-    print("Stream response hit")
+    print(prompt)
     language_instruction = {
         "role": "system",
         "content": f"Respond in the given language: {language}"
@@ -35,16 +35,13 @@ def stream_response(prompt: str, language: str = "en"):
 
         for event in stream:
             event_delta = event.choices[0].delta
+            if hasattr(event_delta, 'content') and event_delta.content is not None:
+                chunk = event_delta.content
+                full_content += chunk
+                yield chunk
 
-            if event_delta.tool_calls is None or len(event_delta.tool_calls) is 0:
-                full_content += event_delta.content
-                # sys.stdout.write(event_delta.content)
-                # sys.stdout.flush()
-                yield event_delta.content
-
-            else:
+            if event_delta.tool_calls:
                 for tool_call in event_delta.tool_calls:
-                    print(json.dumps(tool_call.model_dump(), indent=4))
                     if tool_call.id:
                         final_tool_calls.append(tool_call)
 
@@ -65,7 +62,7 @@ def stream_response(prompt: str, language: str = "en"):
                     "content": str(results)
                 })
 
-            stream = client.chat.completions.create(
+            final_response = client.chat.completions.create(
                 model=model,
                 messages=messages,
                 tools=tools,
@@ -75,23 +72,11 @@ def stream_response(prompt: str, language: str = "en"):
                 stream=True
             )
 
-            final_content = ""
+            for event in final_response:
+                if hasattr(event.choices[0].delta, 'content') and event.choices[0].delta.content is not None:
+                    yield event.choices[0].delta.content
 
-            for event in stream:
-                event_delta = event.choices[0].delta
-
-                final_content += event_delta.content
-                # sys.stdout.write(event_delta.content)
-                # sys.stdout.flush()
-
-                yield event_delta.content
-
-            messages.append({
-                "role": "assistant",
-                "content": final_content
-            })
-                
-    return StreamingResponse(event_stream(), media_type="text/plain")
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 def generate_response(prompt: str, language: str = "en"):
     print(prompt)
