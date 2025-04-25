@@ -8,11 +8,15 @@ type StreamingResponseProps = {
 
 type UseChatReturns = {
   response: string;
-  getStreamingResponse: (props: StreamingResponseProps) => void;
+  error: string | null;
+  isTyping: boolean;
+  getStreamingResponse: (props: StreamingResponseProps) => Promise<void>;
 };
 
 export default function useChat(): UseChatReturns {
   const [response, setResponse] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   const getStreamingResponse = async ({
     prompt,
@@ -24,6 +28,8 @@ export default function useChat(): UseChatReturns {
     };
 
     setResponse("");
+    setError(null);
+    setIsTyping(true);
 
     try {
       const response = await fetch(`${API_URL}/chat/stream`, {
@@ -34,29 +40,40 @@ export default function useChat(): UseChatReturns {
         body: JSON.stringify(body),
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       if (!response.body) {
         throw new Error("Response body is null");
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
+      let accumulatedResponse = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        setResponse((prev) => prev + chunk);
+        if (chunk) {
+          accumulatedResponse += chunk;
+          setResponse(accumulatedResponse);
+        }
       }
     } catch (error) {
       console.error("Error while streaming:", error);
+      setError(error instanceof Error ? error.message : "An unknown error occurred");
+    } finally {
+      setIsTyping(false);
     }
   };
 
-  const hooks = {
+  return {
     response,
+    error,
+    isTyping,
     getStreamingResponse,
   };
-
-  return hooks;
 }
